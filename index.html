@@ -45,11 +45,11 @@
     <h1>H-Basket Pattern Calc</h1>
 
     <div class="fields">
-      <label>a, мм <input id="a" type="number" min="0" value="100"></label>
-      <label>b, мм <input id="b" type="number" min="0" value="160"></label>
-      <label>h, мм <input id="h" type="number" min="0" value="50"></label>
-      <label>p, мм <input id="p" type="number" min="0" value="15"></label>
-      <label>1 мм = <input id="scale" type="number" min="0.1" step="0.1" value="2"> px</label>
+      <label>Ширина (a) <input id="a" type="number" min="0" value="120"></label>
+      <label>Длина (b) <input id="b" type="number" min="0" value="180"></label>
+      <label>Высота (h) <input id="h" type="number" min="0" value="50"></label>
+      <label>Припуск (p) <input id="p" type="number" min="0" value="15"></label>
+      <label>Масштаб <input id="scale" type="number" min="0.1" step="0.1" value="2"></label>
     </div>
 
     <div class="result">Размер выкройки: <output id="size"></output> мм</div>
@@ -95,6 +95,13 @@
     let canvasWidth = 0;
     let canvasHeight = 0;
     let measure = null;
+    const LABEL_GAP = 4;
+    const LABEL_OFFSET = 4;
+
+    const line = (x1, y1, x2, y2, className = '') =>
+      `<line${className ? ` class="${className}"` : ''} x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+    const rect = (className, x, y, width, height) =>
+      `<rect class="${className}" x="${x}" y="${y}" width="${width}" height="${height}"/>`;
 
     function draw() {
       const [a, b, h, p, scale] = fields.map(field => Math.max(0, Number(field.value) || 0));
@@ -115,11 +122,10 @@
       const dots = [];
       for (let y = 0; y < height; y += 10) {
         for (let x = 0; x < width; x += 10) {
-          dots.push(`<circle cx="${x}" cy="${y}" r="0.6"/>`);
+          dots.push(`<circle cx="${x}" cy="${y}" r="${0.6 / scale}"/>`);
         }
       }
       const innerWidth = Math.max(0, width - 2 * p);
-      const innerHeight = Math.max(0, height - 2 * p);
       const floorX = (width - b) / 2;
       const floorY = (height - a) / 2;
       const cutStart = floorY + p;
@@ -138,20 +144,28 @@
       verticalLabels[0].hidden = p === 0;
       verticalLabels[1].hidden = p === 0;
       notchVerticalLabel.hidden = p === 0;
+      // Не сохранять состояние hidden после предыдущего значения p = 0.
+      dimensionLabels[1].hidden = false;
+      dimensionLabels[2].hidden = false;
+      verticalLabels[2].hidden = false;
+      verticalLabels[3].hidden = false;
+      foldLabels.forEach(label => { label.hidden = false; });
+      floorVerticalLabel.hidden = false;
       const box = svg.getBoundingClientRect();
       const scaleX = box.width / width;
       dimensionLabels.forEach((label, index) => {
         const y = [0, p, floorY][index];
         const x = [width / 2, width / 2, floorX + b / 2][index];
         label.style.left = `${x * scaleX}px`;
-        label.style.top = `${y * box.height / height + (index === 1 ? 6 : -6)}px`;
+        label.style.top = `${y * box.height / height + (index === 1 ? 6 : -8)}px`;
         label.style.transform = index === 1 ? 'translate(-50%, 0)' : 'translate(-50%, -100%)';
       });
+      // Фиксированный зазор в пикселях не зависит от масштаба чертежа.
       const verticalPositions = [
-        [-5, cutStart / 2],
-        [-5, (cutEnd + height) / 2],
-        [p + 5, (p + floorY) / 2],
-        [p + 5, (floorY + a + height - p) / 2]
+        [-LABEL_GAP, cutStart / 2],
+        [-LABEL_GAP, (cutEnd + height) / 2],
+        [p + LABEL_GAP, (p + floorY) / 2],
+        [p + LABEL_GAP, (floorY + a + height - p) / 2]
       ];
       verticalLabels.forEach((label, index) => {
         const [x, y] = verticalPositions[index];
@@ -165,7 +179,7 @@
       foldLabels.forEach((label, index) => {
         const [x, y] = foldPositions[index];
         label.style.left = `${x * scaleX}px`;
-        label.style.top = `${y * box.height / height + (index ? -4 : 4)}px`;
+        label.style.top = `${y * box.height / height + (index ? -LABEL_OFFSET : LABEL_OFFSET)}px`;
         label.style.transform = `translate(-50%, ${index ? '-100%' : '0'})`;
       });
       [floorVerticalLabel, notchVerticalLabel].forEach((label, index) => {
@@ -176,7 +190,34 @@
         label.style.top = `${(floorY + a / 2) * box.height / height}px`;
       });
       // Три линии от верхнего конца пустого сегмента: вправо, вниз, влево.
-      svg.innerHTML = `${dots.join('')}<rect class="side" x="${p}" y="${p}" width="${floorX - p}" height="${floorY - p}"/><rect class="side" x="${floorX + b}" y="${p}" width="${floorX - p}" height="${floorY - p}"/><rect class="wall" x="${floorX}" y="${p}" width="${b}" height="${floorY - p}"/><rect class="floor" x="${floorX}" y="${floorY}" width="${b}" height="${a}"/><rect class="side" x="${p}" y="${floorY + a}" width="${floorX - p}" height="${height - p - floorY - a}"/><rect class="side" x="${floorX + b}" y="${floorY + a}" width="${floorX - p}" height="${height - p - floorY - a}"/><rect class="wall" x="${floorX}" y="${floorY + a}" width="${b}" height="${height - p - floorY - a}"/><line x1="0" y1="0" x2="${width}" y2="0"/><line x1="0" y1="${height}" x2="${width}" y2="${height}"/><line x1="0" y1="0" x2="0" y2="${cutStart}"/><line x1="0" y1="${cutEnd}" x2="0" y2="${height}"/><line x1="${width}" y1="0" x2="${width}" y2="${cutStart}"/><line x1="${width}" y1="${cutEnd}" x2="${width}" y2="${height}"/><line class="fold-line" x1="0" y1="${cutStart}" x2="${a / 2}" y2="${cutStart}"/><line class="fold-line" x1="${a / 2}" y1="${cutStart}" x2="${a / 2}" y2="${cutEnd}"/><line class="fold-line" x1="${a / 2}" y1="${cutEnd}" x2="0" y2="${cutEnd}"/><line class="fold-line" x1="${width}" y1="${cutStart}" x2="${width - a / 2}" y2="${cutStart}"/><line class="fold-line" x1="${width - a / 2}" y1="${cutStart}" x2="${width - a / 2}" y2="${cutEnd}"/><line class="fold-line" x1="${width - a / 2}" y1="${cutEnd}" x2="${width}" y2="${cutEnd}"/><line x1="${p}" y1="${p}" x2="${width - p}" y2="${p}"/><line x1="${p}" y1="${p}" x2="${p}" y2="${floorY}"/><line x1="${p}" y1="${floorY + a}" x2="${p}" y2="${height - p}"/><line x1="${width - p}" y1="${p}" x2="${width - p}" y2="${floorY}"/><line x1="${width - p}" y1="${floorY + a}" x2="${width - p}" y2="${height - p}"/><line x1="${p}" y1="${height - p}" x2="${width - p}" y2="${height - p}"/><line x1="${floorX}" y1="${floorY}" x2="${floorX}" y2="${floorY + a}"/><line x1="${floorX + b}" y1="${floorY}" x2="${floorX + b}" y2="${floorY + a}"/><line x1="${p}" y1="${floorY}" x2="${floorX}" y2="${floorY}"/><line x1="${floorX + b}" y1="${floorY}" x2="${width - p}" y2="${floorY}"/><line x1="${p}" y1="${floorY + a}" x2="${floorX}" y2="${floorY + a}"/><line x1="${floorX + b}" y1="${floorY + a}" x2="${width - p}" y2="${floorY + a}"/>`;
+      const shapes = [
+        rect('side', p, p, floorX - p, floorY - p),
+        rect('side', floorX + b, p, floorX - p, floorY - p),
+        rect('wall', floorX, p, b, floorY - p),
+        rect('floor', floorX, floorY, b, a),
+        rect('side', p, floorY + a, floorX - p, height - p - floorY - a),
+        rect('side', floorX + b, floorY + a, floorX - p, height - p - floorY - a),
+        rect('wall', floorX, floorY + a, b, height - p - floorY - a),
+        line(0, 0, width, 0), line(0, height, width, height),
+        line(0, 0, 0, cutStart), line(0, cutEnd, 0, height),
+        line(width, 0, width, cutStart), line(width, cutEnd, width, height),
+        line(0, cutStart, a / 2, cutStart, 'fold-line'),
+        line(a / 2, cutStart, a / 2, cutEnd, 'fold-line'),
+        line(a / 2, cutEnd, 0, cutEnd, 'fold-line'),
+        line(width, cutStart, width - a / 2, cutStart, 'fold-line'),
+        line(width - a / 2, cutStart, width - a / 2, cutEnd, 'fold-line'),
+        line(width - a / 2, cutEnd, width, cutEnd, 'fold-line'),
+        line(p, p, width - p, p), line(p, p, p, floorY),
+        line(p, floorY + a, p, height - p), line(width - p, p, width - p, floorY),
+        line(width - p, floorY + a, width - p, height - p),
+        line(p, height - p, width - p, height - p),
+        line(floorX, floorY, floorX, floorY + a),
+        line(floorX + b, floorY, floorX + b, floorY + a),
+        line(p, floorY, floorX, floorY), line(floorX + b, floorY, width - p, floorY),
+        line(p, floorY + a, floorX, floorY + a),
+        line(floorX + b, floorY + a, width - p, floorY + a)
+      ];
+      svg.innerHTML = dots.join('') + shapes.join('');
       if (measure) drawMeasure(measure.end);
     }
 
@@ -238,6 +279,13 @@
       measure.end = point(event);
       drawMeasure(measure.end);
       svg.releasePointerCapture(event.pointerId);
+    });
+
+    svg.addEventListener('pointercancel', event => {
+      if (measure && svg.hasPointerCapture(event.pointerId)) {
+        svg.releasePointerCapture(event.pointerId);
+      }
+      clearMeasure();
     });
 
     document.addEventListener('keydown', event => {
