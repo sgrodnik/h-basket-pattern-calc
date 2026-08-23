@@ -4,12 +4,56 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>H-Basket Pattern Calculator</title>
+  <meta name="description" content="H-Basket Pattern Calculator — a simple basket pattern calculator.">
+  <meta property="og:type" content="website">
+  <meta property="og:url" content="https://h-basket-pattern-calc.github.io/">
+  <meta property="og:title" content="H-Basket Pattern Calculator">
+  <meta property="og:description" content="Calculate H-basket pattern dimensions online.">
+  <meta name="twitter:card" content="summary">
+  <meta name="twitter:title" content="H-Basket Pattern Calculator">
+  <meta name="twitter:description" content="Calculate H-basket pattern dimensions online.">
   <style>
     * { box-sizing: border-box; }
+    :root {
+      color-scheme: light;
+      --background: #fff;
+      --text: #222;
+      --muted-border: #aaa;
+      --canvas-border: #ddd;
+      --line: #222;
+      --floor: #eee;
+      --wall: #eaf4ff;
+      --side: #ffeaea;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root:not([data-theme="light"]) {
+        color-scheme: dark;
+        --background: #17191c;
+        --text: #f1f3f5;
+        --muted-border: #687078;
+        --canvas-border: #596168;
+        --line: #e8eaed;
+        --floor: #30353a;
+        --wall: #203544;
+        --side: #442d30;
+      }
+    }
+    :root[data-theme="dark"] {
+      color-scheme: dark;
+      --background: #17191c;
+      --text: #f1f3f5;
+      --muted-border: #687078;
+      --canvas-border: #596168;
+      --line: #e8eaed;
+      --floor: #30353a;
+      --wall: #203544;
+      --side: #442d30;
+    }
+    body { background: var(--background); }
     body {
       margin: 0;
       padding: 24px;
-      color: #222;
+      color: var(--text);
       font: 16px/1.4 system-ui, sans-serif;
     }
     main { max-width: 720px; margin: auto; }
@@ -17,30 +61,37 @@
     .fields { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
     .actions { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; margin: 20px 0 0; }
     .language { margin: 0; }
+    .settings {
+      display: flex;
+      align-items: end;
+      gap: 12px;
+    }
+    .theme label { display: grid; gap: 4px; }
+    select { padding: 7px; border: 1px solid var(--muted-border); border-radius: 4px; background: var(--background); color: var(--text); font: inherit; }
     label { display: grid; gap: 4px; }
     input {
       width: 100px;
       padding: 8px;
-      border: 1px solid #aaa;
+      border: 1px solid var(--muted-border);
       border-radius: 4px;
       font: inherit;
     }
     button { padding: 8px 12px; font: inherit; cursor: pointer; }
     .result { margin-bottom: 30px; }
     .canvas { position: relative; }
-    svg { display: block; border: 1px solid #ddd; touch-action: none; }
+    svg { display: block; border: 1px solid var(--canvas-border); touch-action: none; }
     circle { fill: #bbb; }
-    rect { fill: none; stroke: #222; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
-    .floor { fill: #eee; stroke: none; opacity: 0.5; }
-    .wall { fill: #eaf4ff; stroke: none; opacity: 0.5; }
-    .side { fill: #ffeaea; stroke: none; opacity: 0.5; }
-    line { stroke: #222; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+    rect { fill: none; stroke: var(--line); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+    .floor { fill: var(--floor); stroke: none; opacity: 0.5; }
+    .wall { fill: var(--wall); stroke: none; opacity: 0.5; }
+    .side { fill: var(--side); stroke: none; opacity: 0.5; }
+    line { stroke: var(--line); stroke-width: 1.5; vector-effect: non-scaling-stroke; }
     .fold-line { stroke-width: 0.75; }
     .measure-line { stroke: #d33; stroke-width: 2; vector-effect: non-scaling-stroke; }
     .measure-label { position: absolute; color: #d33; font-size: 14px; line-height: 1; white-space: nowrap; pointer-events: none; transform-origin: center; }
-    .dimension-label { position: absolute; color: #222; font-size: 14px; line-height: 1; white-space: nowrap; transform: translate(-50%, -100%); }
+    .dimension-label { position: absolute; color: var(--text); font-size: 14px; line-height: 1; white-space: nowrap; transform: translate(-50%, -100%); }
     .vertical-label { transform: translate(-50%, -50%) rotate(-90deg); }
-    .fold-label { position: absolute; color: #222; font-size: 14px; line-height: 1; white-space: nowrap; pointer-events: none; transform: translate(-50%, -50%); }
+    .fold-label { position: absolute; color: var(--text); font-size: 14px; line-height: 1; white-space: nowrap; pointer-events: none; transform: translate(-50%, -50%); }
   </style>
 </head>
 <body>
@@ -75,19 +126,30 @@
     <div class="actions">
       <button id="reset" type="button" data-i18n="reset">Сбросить</button>
       <button id="share" type="button" data-i18n="share">Поделиться ссылкой с размерами</button>
-      <div class="language">
-        <label><span data-i18n="language">Язык</span>
-          <select id="language" aria-label="Язык">
-            <option value="ru">Русский</option>
-            <option value="en">English</option>
-            <option value="es">Español</option>
-            <option value="zh">中文</option>
-            <option value="de">Deutsch</option>
-            <option value="fr">Français</option>
-            <option value="it">Italiano</option>
-            <option value="pt">Português</option>
-          </select>
-        </label>
+      <div class="settings" aria-label="Настройки отображения">
+        <div class="language">
+          <label><span data-i18n="language">Language</span>
+            <select id="language" aria-label="Language" data-i18n-aria-label="language">
+              <option value="ru">Русский</option>
+              <option value="en">English</option>
+              <option value="es">Español</option>
+              <option value="zh">中文</option>
+              <option value="de">Deutsch</option>
+              <option value="fr">Français</option>
+              <option value="it">Italiano</option>
+              <option value="pt">Português</option>
+            </select>
+          </label>
+        </div>
+        <div class="theme">
+          <label><span data-i18n="theme">Theme</span>
+            <select id="theme" aria-label="Theme" data-i18n-aria-label="theme">
+              <option value="auto" data-i18n="themeAuto">Auto</option>
+              <option value="light" data-i18n="themeLight">Day</option>
+              <option value="dark" data-i18n="themeDark">Night</option>
+            </select>
+          </label>
+        </div>
       </div>
     </div>
   </main>
@@ -100,21 +162,21 @@
     const resetButton = document.getElementById('reset');
     const shareButton = document.getElementById('share');
     const languageSelect = document.getElementById('language');
+    const themeSelect = document.getElementById('theme');
     const languageStorageKey = 'h-basket-pattern-language';
+    const themeStorageKey = 'h-basket-pattern-theme';
     const translations = {
-      ru: { title: 'Калькулятор H-выкройки корзины', language: 'Язык', width: 'Ширина (a)', length: 'Длина (b)', height: 'Высота (h)', allowance: 'Припуск (p)', scale: 'Масштаб', patternSize: 'Размер выкройки:', mm: 'мм', patternCanvas: 'Холст выкройки', reset: 'Сбросить', share: 'Поделиться ссылкой с размерами', copied: 'Ссылка скопирована', shareShort: 'Поделиться', copyPrompt: 'Скопируйте ссылку:' },
-      en: { title: 'H-Basket Pattern Calculator', language: 'Language', width: 'Width (a)', length: 'Length (b)', height: 'Height (h)', allowance: 'Seam allowance (p)', scale: 'Scale', patternSize: 'Pattern size:', mm: 'mm', patternCanvas: 'Pattern canvas', reset: 'Reset', share: 'Share link with dimensions', copied: 'Link copied', shareShort: 'Share', copyPrompt: 'Copy this link:' },
-      es: { title: 'Calculadora de patrón H para cesta', language: 'Idioma', width: 'Ancho (a)', length: 'Largo (b)', height: 'Alto (h)', allowance: 'Margen (p)', scale: 'Escala', patternSize: 'Tamaño del patrón:', mm: 'mm', patternCanvas: 'Lienzo del patrón', reset: 'Restablecer', share: 'Compartir enlace con medidas', copied: 'Enlace copiado', shareShort: 'Compartir', copyPrompt: 'Copia este enlace:' },
-      zh: { title: 'H 型篮子纸样计算器', language: '语言', width: '宽度 (a)', length: '长度 (b)', height: '高度 (h)', allowance: '缝份 (p)', scale: '比例', patternSize: '纸样尺寸：', mm: '毫米', patternCanvas: '纸样画布', reset: '重置', share: '分享尺寸链接', copied: '链接已复制', shareShort: '分享', copyPrompt: '请复制链接：' },
-      de: { title: 'H-Korb-Schnittmusterrechner', language: 'Sprache', width: 'Breite (a)', length: 'Länge (b)', height: 'Höhe (h)', allowance: 'Nahtzugabe (p)', scale: 'Maßstab', patternSize: 'Schnittmustergröße:', mm: 'mm', patternCanvas: 'Schnittmusterfläche', reset: 'Zurücksetzen', share: 'Link mit Maßen teilen', copied: 'Link kopiert', shareShort: 'Teilen', copyPrompt: 'Diesen Link kopieren:' },
-      fr: { title: 'Calculateur de patron H pour panier', language: 'Langue', width: 'Largeur (a)', length: 'Longueur (b)', height: 'Hauteur (h)', allowance: 'Marge de couture (p)', scale: 'Échelle', patternSize: 'Taille du patron :', mm: 'mm', patternCanvas: 'Zone du patron', reset: 'Réinitialiser', share: 'Partager le lien avec les dimensions', copied: 'Lien copié', shareShort: 'Partager', copyPrompt: 'Copiez ce lien :' },
-      it: { title: 'Calcolatore del modello H per cestino', language: 'Lingua', width: 'Larghezza (a)', length: 'Lunghezza (b)', height: 'Altezza (h)', allowance: 'Margine (p)', scale: 'Scala', patternSize: 'Dimensioni del modello:', mm: 'mm', patternCanvas: 'Area del modello', reset: 'Ripristina', share: 'Condividi il link con le misure', copied: 'Link copiato', shareShort: 'Condividi', copyPrompt: 'Copia questo link:' },
-      pt: { title: 'Calculadora de molde H para cesto', language: 'Idioma', width: 'Largura (a)', length: 'Comprimento (b)', height: 'Altura (h)', allowance: 'Margem (p)', scale: 'Escala', patternSize: 'Tamanho do molde:', mm: 'mm', patternCanvas: 'Área do molde', reset: 'Redefinir', share: 'Compartilhar link com medidas', copied: 'Link copiado', shareShort: 'Compartilhar', copyPrompt: 'Copie este link:' }
+      ru: { title: 'Калькулятор H-выкройки корзины', language: 'Язык', theme: 'Тема', themeAuto: 'Авто', themeLight: 'День', themeDark: 'Ночь', width: 'Ширина (a)', length: 'Длина (b)', height: 'Высота (h)', allowance: 'Припуск (p)', scale: 'Масштаб', patternSize: 'Размер выкройки:', mm: 'мм', patternCanvas: 'Холст выкройки', reset: 'Сбросить', share: 'Поделиться ссылкой с размерами', copied: 'Ссылка скопирована', shareShort: 'Поделиться', copyPrompt: 'Скопируйте ссылку:' },
+      en: { title: 'H-Basket Pattern Calculator', language: 'Language', theme: 'Theme', themeAuto: 'Auto', themeLight: 'Day', themeDark: 'Night', width: 'Width (a)', length: 'Length (b)', height: 'Height (h)', allowance: 'Seam allowance (p)', scale: 'Scale', patternSize: 'Pattern size:', mm: 'mm', patternCanvas: 'Pattern canvas', reset: 'Reset', share: 'Share link with dimensions', copied: 'Link copied', shareShort: 'Share', copyPrompt: 'Copy this link:' },
+      es: { title: 'Calculadora de patrón H para cesta', language: 'Idioma', theme: 'Tema', themeAuto: 'Auto', themeLight: 'Día', themeDark: 'Noche', width: 'Ancho (a)', length: 'Largo (b)', height: 'Alto (h)', allowance: 'Margen (p)', scale: 'Escala', patternSize: 'Tamaño del patrón:', mm: 'mm', patternCanvas: 'Lienzo del patrón', reset: 'Restablecer', share: 'Compartir enlace con medidas', copied: 'Enlace copiado', shareShort: 'Compartir', copyPrompt: 'Copia este enlace:' },
+      zh: { title: 'H 型篮子纸样计算器', language: '语言', theme: '主题', themeAuto: '自动', themeLight: '白天', themeDark: '夜间', width: '宽度 (a)', length: '长度 (b)', height: '高度 (h)', allowance: '缝份 (p)', scale: '比例', patternSize: '纸样尺寸：', mm: '毫米', patternCanvas: '纸样画布', reset: '重置', share: '分享尺寸链接', copied: '链接已复制', shareShort: '分享', copyPrompt: '请复制链接：' },
+      de: { title: 'H-Korb-Schnittmusterrechner', language: 'Sprache', theme: 'Design', themeAuto: 'Auto', themeLight: 'Tag', themeDark: 'Nacht', width: 'Breite (a)', length: 'Länge (b)', height: 'Höhe (h)', allowance: 'Nahtzugabe (p)', scale: 'Maßstab', patternSize: 'Schnittmustergröße:', mm: 'mm', patternCanvas: 'Schnittmusterfläche', reset: 'Zurücksetzen', share: 'Link mit Maßen teilen', copied: 'Link kopiert', shareShort: 'Teilen', copyPrompt: 'Diesen Link kopieren:' },
+      fr: { title: 'Calculateur de patron H pour panier', language: 'Langue', theme: 'Thème', themeAuto: 'Auto', themeLight: 'Jour', themeDark: 'Nuit', width: 'Largeur (a)', length: 'Longueur (b)', height: 'Hauteur (h)', allowance: 'Marge de couture (p)', scale: 'Échelle', patternSize: 'Taille du patron :', mm: 'mm', patternCanvas: 'Zone du patron', reset: 'Réinitialiser', share: 'Partager le lien avec les dimensions', copied: 'Lien copié', shareShort: 'Partager', copyPrompt: 'Copiez ce lien :' },
+      it: { title: 'Calcolatore del modello H per cestino', language: 'Lingua', theme: 'Tema', themeAuto: 'Auto', themeLight: 'Giorno', themeDark: 'Notte', width: 'Larghezza (a)', length: 'Lunghezza (b)', height: 'Altezza (h)', allowance: 'Margine (p)', scale: 'Scala', patternSize: 'Dimensioni del modello:', mm: 'mm', patternCanvas: 'Area del modello', reset: 'Ripristina', share: 'Condividi il link con le misure', copied: 'Link copiato', shareShort: 'Condividi', copyPrompt: 'Copia questo link:' },
+      pt: { title: 'Calculadora de molde H para cesto', language: 'Idioma', theme: 'Tema', themeAuto: 'Automático', themeLight: 'Dia', themeDark: 'Noite', width: 'Largura (a)', length: 'Comprimento (b)', height: 'Altura (h)', allowance: 'Margem (p)', scale: 'Escala', patternSize: 'Tamanho do molde:', mm: 'mm', patternCanvas: 'Área do molde', reset: 'Redefinir', share: 'Compartilhar link com medidas', copied: 'Link copiado', shareShort: 'Compartilhar', copyPrompt: 'Copie este link:' }
     };
-    const browserLanguage = (navigator.languages || [navigator.language])
-      .map(language => language.toLowerCase().split('-')[0])
-      .find(language => translations[language]) || 'en';
-    let currentLanguage = localStorage.getItem(languageStorageKey) || browserLanguage;
+    // English is the default; a previously selected language is preserved.
+    let currentLanguage = localStorage.getItem(languageStorageKey) || 'en';
     const defaults = { a: 100, b: 160, h: 50, p: 15, scale: 2 };
     const storageKey = 'h-basket-pattern-values';
     const dimensionLabels = [
@@ -162,6 +224,13 @@
 
     function t(key) {
       return translations[currentLanguage][key];
+    }
+
+    function applyTheme(theme) {
+      const selectedTheme = ['auto', 'light', 'dark'].includes(theme) ? theme : 'auto';
+      themeSelect.value = selectedTheme;
+      document.documentElement.dataset.theme = selectedTheme === 'auto' ? '' : selectedTheme;
+      localStorage.setItem(themeStorageKey, selectedTheme);
     }
 
     function applyLanguage(language) {
@@ -382,6 +451,7 @@
     });
 
     languageSelect.addEventListener('change', event => applyLanguage(event.target.value));
+    themeSelect.addEventListener('change', event => applyTheme(event.target.value));
 
     shareButton.addEventListener('click', async () => {
       const url = new URL(window.location.href);
@@ -400,6 +470,7 @@
     const params = new URLSearchParams(window.location.search);
     const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
     applyLanguage(currentLanguage);
+    applyTheme(localStorage.getItem(themeStorageKey) || 'auto');
     setValues(params.toString() ? Object.fromEntries(params) : (saved || defaults));
     draw();
   </script>
