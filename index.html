@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>H-Basket Pattern Calc</title>
+  <title>Калькулятор H-выкройки корзины</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -16,6 +16,7 @@
     h1 { margin: 0 0 24px; font-size: 24px; font-weight: 600; }
     .fields { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
     .actions { display: flex; gap: 12px; margin: 20px 0 0; }
+    .language { margin-bottom: 16px; }
     label { display: grid; gap: 4px; }
     input {
       width: 100px;
@@ -44,19 +45,30 @@
 </head>
 <body>
   <main>
-    <h1>H-Basket Pattern Calc</h1>
+    <h1 data-i18n="title">Калькулятор H-выкройки корзины</h1>
 
-    <div class="fields">
-      <label>Ширина (a) <input id="a" type="number" min="0" value="120"></label>
-      <label>Длина (b) <input id="b" type="number" min="0" value="180"></label>
-      <label>Высота (h) <input id="h" type="number" min="0" value="50"></label>
-      <label>Припуск (p) <input id="p" type="number" min="0" value="15"></label>
-      <label>Масштаб <input id="scale" type="number" min="0.1" step="0.1" value="2"></label>
+    <div class="language">
+      <label><span data-i18n="language">Язык</span>
+        <select id="language" aria-label="Язык">
+          <option value="ru">Русский</option>
+          <option value="en">English</option>
+          <option value="es">Español</option>
+          <option value="zh">中文</option>
+        </select>
+      </label>
     </div>
 
-    <div class="result">Размер выкройки: <output id="size"></output> мм</div>
+    <div class="fields">
+      <label><span data-i18n="width">Ширина (a)</span> <input id="a" type="number" min="0" value="120"></label>
+      <label><span data-i18n="length">Длина (b)</span> <input id="b" type="number" min="0" value="180"></label>
+      <label><span data-i18n="height">Высота (h)</span> <input id="h" type="number" min="0" value="50"></label>
+      <label><span data-i18n="allowance">Припуск (p)</span> <input id="p" type="number" min="0" value="15"></label>
+      <label><span data-i18n="scale">Масштаб</span> <input id="scale" type="number" min="0.1" step="0.1" value="2"></label>
+    </div>
+
+    <div class="result"><span data-i18n="patternSize">Размер выкройки:</span> <output id="size"></output> <span data-i18n="mm">мм</span></div>
     <div class="canvas">
-      <svg id="pattern" role="img" aria-label="Холст выкройки"></svg>
+      <svg id="pattern" role="img" aria-label="Холст выкройки" data-i18n-aria-label="patternCanvas"></svg>
       <div id="measureLabel" class="measure-label" hidden></div>
       <div id="outerLabel" class="dimension-label"></div>
       <div id="innerLabel" class="dimension-label"></div>
@@ -72,8 +84,8 @@
     </div>
 
     <div class="actions">
-      <button id="reset" type="button">Сбросить</button>
-      <button id="share" type="button">Поделиться ссылкой с размерами</button>
+      <button id="reset" type="button" data-i18n="reset">Сбросить</button>
+      <button id="share" type="button" data-i18n="share">Поделиться ссылкой с размерами</button>
     </div>
   </main>
 
@@ -84,6 +96,15 @@
     const measureLabel = document.getElementById('measureLabel');
     const resetButton = document.getElementById('reset');
     const shareButton = document.getElementById('share');
+    const languageSelect = document.getElementById('language');
+    const languageStorageKey = 'h-basket-pattern-language';
+    const translations = {
+      ru: { title: 'Калькулятор H-выкройки корзины', language: 'Язык', width: 'Ширина (a)', length: 'Длина (b)', height: 'Высота (h)', allowance: 'Припуск (p)', scale: 'Масштаб', patternSize: 'Размер выкройки:', mm: 'мм', patternCanvas: 'Холст выкройки', reset: 'Сбросить', share: 'Поделиться ссылкой с размерами', copied: 'Ссылка скопирована', shareShort: 'Поделиться', copyPrompt: 'Скопируйте ссылку:' },
+      en: { title: 'H-Basket Pattern Calculator', language: 'Language', width: 'Width (a)', length: 'Length (b)', height: 'Height (h)', allowance: 'Seam allowance (p)', scale: 'Scale', patternSize: 'Pattern size:', mm: 'mm', patternCanvas: 'Pattern canvas', reset: 'Reset', share: 'Share link with dimensions', copied: 'Link copied', shareShort: 'Share', copyPrompt: 'Copy this link:' },
+      es: { title: 'Calculadora de patrón H para cesta', language: 'Idioma', width: 'Ancho (a)', length: 'Largo (b)', height: 'Alto (h)', allowance: 'Margen (p)', scale: 'Escala', patternSize: 'Tamaño del patrón:', mm: 'mm', patternCanvas: 'Lienzo del patrón', reset: 'Restablecer', share: 'Compartir enlace con medidas', copied: 'Enlace copiado', shareShort: 'Compartir', copyPrompt: 'Copia este enlace:' },
+      zh: { title: 'H 型篮子纸样计算器', language: '语言', width: '宽度 (a)', length: '长度 (b)', height: '高度 (h)', allowance: '缝份 (p)', scale: '比例', patternSize: '纸样尺寸：', mm: '毫米', patternCanvas: '纸样画布', reset: '重置', share: '分享尺寸链接', copied: '链接已复制', shareShort: '分享', copyPrompt: '请复制链接：' }
+    };
+    let currentLanguage = localStorage.getItem(languageStorageKey) || 'ru';
     const defaults = { a: 100, b: 160, h: 50, p: 15, scale: 2 };
     const storageKey = 'h-basket-pattern-values';
     const dimensionLabels = [
@@ -129,6 +150,25 @@
       localStorage.setItem(storageKey, JSON.stringify(values()));
     }
 
+    function t(key) {
+      return translations[currentLanguage][key];
+    }
+
+    function applyLanguage(language) {
+      currentLanguage = translations[language] ? language : 'ru';
+      languageSelect.value = currentLanguage;
+      document.documentElement.lang = currentLanguage;
+      document.title = t('title');
+      document.querySelectorAll('[data-i18n]').forEach(element => {
+        element.textContent = t(element.dataset.i18n);
+      });
+      document.querySelectorAll('[data-i18n-aria-label]').forEach(element => {
+        element.setAttribute('aria-label', t(element.dataset.i18nAriaLabel));
+      });
+      localStorage.setItem(languageStorageKey, currentLanguage);
+      draw();
+    }
+
     function draw() {
       const [a, b, h, p, scale] = fields.map(field => Math.max(0, Number(field.value) || 0));
       const width = a + b + 2 * p;
@@ -156,13 +196,13 @@
       const floorY = (height - a) / 2;
       const cutStart = floorY + p;
       const cutEnd = floorY + a - p;
-      dimensionLabels[0].textContent = `a + b + 2p = ${a} + ${b} + 2×${p} = ${width} мм`;
-      dimensionLabels[1].textContent = `a + b = ${a} + ${b} = ${a + b} мм`;
-      dimensionLabels[2].textContent = `b = ${b} мм`;
-      verticalLabels[0].textContent = `h + 2p = ${h + 2 * p} мм`;
-      verticalLabels[1].textContent = `h + 2p = ${h + 2 * p} мм`;
-      verticalLabels[2].textContent = `h = ${h} мм`;
-      verticalLabels[3].textContent = `h = ${h} мм`;
+      dimensionLabels[0].textContent = `a + b + 2p = ${a} + ${b} + 2×${p} = ${width}`;
+      dimensionLabels[1].textContent = `a + b = ${a} + ${b} = ${a + b}`;
+      dimensionLabels[2].textContent = `b = ${b}`;
+      verticalLabels[0].textContent = `h + 2p = ${h + 2 * p}`;
+      verticalLabels[1].textContent = `h + 2p = ${h + 2 * p}`;
+      verticalLabels[2].textContent = `h = ${h}`;
+      verticalLabels[3].textContent = `h = ${h}`;
       foldLabels.forEach(label => { label.textContent = `a/2 = ${a/2}`; });
       floorVerticalLabel.textContent = `a = ${a}`;
       notchVerticalLabel.textContent = `a-2p = ${a - 2 * p}`;
@@ -271,7 +311,7 @@
       const box = svg.getBoundingClientRect();
       const mx = ((measure.start.x + end.x) / 2) * box.width / canvasWidth;
       const my = ((measure.start.y + end.y) / 2) * box.height / canvasHeight;
-      measureLabel.textContent = `${Math.round(length)} мм`;
+      measureLabel.textContent = `${Math.round(length)}`;
       measureLabel.hidden = false;
       measureLabel.style.left = `${mx}px`;
       measureLabel.style.top = `${my - 8}px`;
@@ -331,6 +371,8 @@
       saveValues();
     });
 
+    languageSelect.addEventListener('change', event => applyLanguage(event.target.value));
+
     shareButton.addEventListener('click', async () => {
       const url = new URL(window.location.href);
       Object.entries(values()).forEach(([key, value]) => {
@@ -338,15 +380,16 @@
       });
       try {
         await navigator.clipboard.writeText(url.href);
-        shareButton.textContent = 'Ссылка скопирована';
-        setTimeout(() => { shareButton.textContent = 'Поделиться'; }, 1500);
+        shareButton.textContent = t('copied');
+        setTimeout(() => { shareButton.textContent = t('shareShort'); }, 1500);
       } catch {
-        window.prompt('Скопируйте ссылку:', url.href);
+        window.prompt(t('copyPrompt'), url.href);
       }
     });
 
     const params = new URLSearchParams(window.location.search);
     const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
+    applyLanguage(currentLanguage);
     setValues(params.toString() ? Object.fromEntries(params) : (saved || defaults));
     draw();
   </script>
