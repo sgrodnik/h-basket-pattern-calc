@@ -15,7 +15,7 @@
     main { max-width: 720px; margin: auto; }
     h1 { margin: 0 0 24px; font-size: 24px; font-weight: 600; }
     .fields { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
-    .actions { display: flex; gap: 12px; margin: 0 0 24px; }
+    .actions { display: flex; gap: 12px; margin: 20px 0 0; }
     label { display: grid; gap: 4px; }
     input {
       width: 100px;
@@ -25,7 +25,7 @@
       font: inherit;
     }
     button { padding: 8px 12px; font: inherit; cursor: pointer; }
-    .result { margin-bottom: 16px; }
+    .result { margin-bottom: 30px; }
     .canvas { position: relative; }
     svg { display: block; border: 1px solid #ddd; touch-action: none; }
     circle { fill: #bbb; }
@@ -53,10 +53,6 @@
       <label>Припуск (p) <input id="p" type="number" min="0" value="15"></label>
       <label>Масштаб <input id="scale" type="number" min="0.1" step="0.1" value="2"></label>
     </div>
-    <div class="actions">
-      <button id="reset" type="button">Сбросить</button>
-      <button id="share" type="button">Поделиться</button>
-    </div>
 
     <div class="result">Размер выкройки: <output id="size"></output> мм</div>
     <div class="canvas">
@@ -73,6 +69,11 @@
       <div id="foldLeftBottomLabel" class="fold-label"></div>
       <div id="floorVerticalLabel" class="dimension-label vertical-label"></div>
       <div id="notchVerticalLabel" class="dimension-label vertical-label"></div>
+    </div>
+
+    <div class="actions">
+      <button id="reset" type="button">Сбросить</button>
+      <button id="share" type="button">Поделиться ссылкой с размерами</button>
     </div>
   </main>
 
