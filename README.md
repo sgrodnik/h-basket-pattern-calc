@@ -2,7 +2,7 @@
 
 A lightweight, zero-dependency web tool to calculate, visualize, and measure H-shaped pattern dimensions for custom fabric or leather baskets.
 
-**[Open the live demo](https://h-basket-pattern-calc.github.io)**
+**[Open the live demo](https://h-basket-pattern-calc.grodnik.me)**
 
 ## Features
 
