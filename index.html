@@ -1,0 +1,256 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>H-Basket Pattern Calc</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      padding: 24px;
+      color: #222;
+      font: 16px/1.4 system-ui, sans-serif;
+    }
+    main { max-width: 720px; margin: auto; }
+    h1 { margin: 0 0 24px; font-size: 24px; font-weight: 600; }
+    .fields { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+    label { display: grid; gap: 4px; }
+    input {
+      width: 100px;
+      padding: 8px;
+      border: 1px solid #aaa;
+      border-radius: 4px;
+      font: inherit;
+    }
+    .result { margin-bottom: 16px; }
+    .canvas { position: relative; }
+    svg { display: block; border: 1px solid #ddd; touch-action: none; }
+    circle { fill: #bbb; }
+    rect { fill: none; stroke: #222; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+    .floor { fill: #eee; stroke: none; opacity: 0.5; }
+    .wall { fill: #eaf4ff; stroke: none; opacity: 0.5; }
+    .side { fill: #ffeaea; stroke: none; opacity: 0.5; }
+    line { stroke: #222; stroke-width: 1.5; vector-effect: non-scaling-stroke; }
+    .fold-line { stroke-width: 0.75; }
+    .measure-line { stroke: #d33; stroke-width: 2; vector-effect: non-scaling-stroke; }
+    .measure-label { position: absolute; color: #d33; font-size: 14px; line-height: 1; white-space: nowrap; pointer-events: none; transform-origin: center; }
+    .dimension-label { position: absolute; color: #222; font-size: 14px; line-height: 1; white-space: nowrap; transform: translate(-50%, -100%); }
+    .vertical-label { transform: translate(-50%, -50%) rotate(-90deg); }
+    .fold-label { position: absolute; color: #222; font-size: 14px; line-height: 1; white-space: nowrap; pointer-events: none; transform: translate(-50%, -50%); }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>H-Basket Pattern Calc</h1>
+
+    <div class="fields">
+      <label>a, мм <input id="a" type="number" min="0" value="100"></label>
+      <label>b, мм <input id="b" type="number" min="0" value="160"></label>
+      <label>h, мм <input id="h" type="number" min="0" value="50"></label>
+      <label>p, мм <input id="p" type="number" min="0" value="15"></label>
+      <label>1 мм = <input id="scale" type="number" min="0.1" step="0.1" value="2"> px</label>
+    </div>
+
+    <div class="result">Размер выкройки: <output id="size"></output> мм</div>
+    <div class="canvas">
+      <svg id="pattern" role="img" aria-label="Холст выкройки"></svg>
+      <div id="measureLabel" class="measure-label" hidden></div>
+      <div id="outerLabel" class="dimension-label"></div>
+      <div id="innerLabel" class="dimension-label"></div>
+      <div id="floorLabel" class="dimension-label"></div>
+      <div id="outerTopVerticalLabel" class="dimension-label vertical-label"></div>
+      <div id="outerBottomVerticalLabel" class="dimension-label vertical-label"></div>
+      <div id="innerTopVerticalLabel" class="dimension-label vertical-label"></div>
+      <div id="innerBottomVerticalLabel" class="dimension-label vertical-label"></div>
+      <div id="foldLeftTopLabel" class="fold-label"></div>
+      <div id="foldLeftBottomLabel" class="fold-label"></div>
+      <div id="floorVerticalLabel" class="dimension-label vertical-label"></div>
+      <div id="notchVerticalLabel" class="dimension-label vertical-label"></div>
+    </div>
+  </main>
+
+  <script>
+    const fields = ['a', 'b', 'h', 'p', 'scale'].map(id => document.getElementById(id));
+    const svg = document.getElementById('pattern');
+    const size = document.getElementById('size');
+    const measureLabel = document.getElementById('measureLabel');
+    const dimensionLabels = [
+      document.getElementById('outerLabel'),
+      document.getElementById('innerLabel'),
+      document.getElementById('floorLabel')
+    ];
+    const verticalLabels = [
+      document.getElementById('outerTopVerticalLabel'),
+      document.getElementById('outerBottomVerticalLabel'),
+      document.getElementById('innerTopVerticalLabel'),
+      document.getElementById('innerBottomVerticalLabel')
+    ];
+    const foldLabels = [
+      document.getElementById('foldLeftTopLabel'),
+      document.getElementById('foldLeftBottomLabel')
+    ];
+    const floorVerticalLabel = document.getElementById('floorVerticalLabel');
+    const notchVerticalLabel = document.getElementById('notchVerticalLabel');
+    let canvasWidth = 0;
+    let canvasHeight = 0;
+    let measure = null;
+
+    function draw() {
+      const [a, b, h, p, scale] = fields.map(field => Math.max(0, Number(field.value) || 0));
+      const width = a + b + 2 * p;
+      const height = a + 2 * h + 2 * p;
+      canvasWidth = width;
+      canvasHeight = height;
+      size.value = `${width} × ${height}`;
+      svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+      // 1 мм выкройки соответствует 1 px на экране: меняется физический
+      // размер холста, а не только его масштабирование.
+      svg.setAttribute('width', width);
+      svg.setAttribute('height', height);
+      svg.style.width = `${width * scale}px`;
+      svg.style.height = `${height * scale}px`;
+
+      // Точка каждые 10 мм: для 340×250 мм получается сетка 34×25 точек.
+      const dots = [];
+      for (let y = 0; y < height; y += 10) {
+        for (let x = 0; x < width; x += 10) {
+          dots.push(`<circle cx="${x}" cy="${y}" r="0.6"/>`);
+        }
+      }
+      const innerWidth = Math.max(0, width - 2 * p);
+      const innerHeight = Math.max(0, height - 2 * p);
+      const floorX = (width - b) / 2;
+      const floorY = (height - a) / 2;
+      const cutStart = floorY + p;
+      const cutEnd = floorY + a - p;
+      dimensionLabels[0].textContent = `a + b + 2p = ${a} + ${b} + 2×${p} = ${width} мм`;
+      dimensionLabels[1].textContent = `a + b = ${a} + ${b} = ${a + b} мм`;
+      dimensionLabels[2].textContent = `b = ${b} мм`;
+      verticalLabels[0].textContent = `h + 2p = ${h + 2 * p} мм`;
+      verticalLabels[1].textContent = `h + 2p = ${h + 2 * p} мм`;
+      verticalLabels[2].textContent = `h = ${h} мм`;
+      verticalLabels[3].textContent = `h = ${h} мм`;
+      foldLabels.forEach(label => { label.textContent = `a/2 = ${a/2}`; });
+      floorVerticalLabel.textContent = `a = ${a}`;
+      notchVerticalLabel.textContent = `a-2p = ${a - 2 * p}`;
+      dimensionLabels[0].hidden = p === 0;
+      verticalLabels[0].hidden = p === 0;
+      verticalLabels[1].hidden = p === 0;
+      notchVerticalLabel.hidden = p === 0;
+      const box = svg.getBoundingClientRect();
+      const scaleX = box.width / width;
+      dimensionLabels.forEach((label, index) => {
+        const y = [0, p, floorY][index];
+        const x = [width / 2, width / 2, floorX + b / 2][index];
+        label.style.left = `${x * scaleX}px`;
+        label.style.top = `${y * box.height / height + (index === 1 ? 6 : -6)}px`;
+        label.style.transform = index === 1 ? 'translate(-50%, 0)' : 'translate(-50%, -100%)';
+      });
+      const verticalPositions = [
+        [-5, cutStart / 2],
+        [-5, (cutEnd + height) / 2],
+        [p + 5, (p + floorY) / 2],
+        [p + 5, (floorY + a + height - p) / 2]
+      ];
+      verticalLabels.forEach((label, index) => {
+        const [x, y] = verticalPositions[index];
+        label.style.left = `${x * scaleX}px`;
+        label.style.top = `${y * box.height / height}px`;
+      });
+      const foldPositions = [
+        [a / 4, cutStart],
+        [a / 4, cutEnd]
+      ];
+      foldLabels.forEach((label, index) => {
+        const [x, y] = foldPositions[index];
+        label.style.left = `${x * scaleX}px`;
+        label.style.top = `${y * box.height / height + (index ? -4 : 4)}px`;
+        label.style.transform = `translate(-50%, ${index ? '-100%' : '0'})`;
+      });
+      [floorVerticalLabel, notchVerticalLabel].forEach((label, index) => {
+        // Подписи ставим рядом с соответствующими вертикальными линиями:
+        // «a» — у левой границы дна, «a-2p» — у линии выреза.
+        const x = index ? a / 2 - 4 : floorX + 4;
+        label.style.left = `${x * scaleX}px`;
+        label.style.top = `${(floorY + a / 2) * box.height / height}px`;
+      });
+      // Три линии от верхнего конца пустого сегмента: вправо, вниз, влево.
+      svg.innerHTML = `${dots.join('')}<rect class="side" x="${p}" y="${p}" width="${floorX - p}" height="${floorY - p}"/><rect class="side" x="${floorX + b}" y="${p}" width="${floorX - p}" height="${floorY - p}"/><rect class="wall" x="${floorX}" y="${p}" width="${b}" height="${floorY - p}"/><rect class="floor" x="${floorX}" y="${floorY}" width="${b}" height="${a}"/><rect class="side" x="${p}" y="${floorY + a}" width="${floorX - p}" height="${height - p - floorY - a}"/><rect class="side" x="${floorX + b}" y="${floorY + a}" width="${floorX - p}" height="${height - p - floorY - a}"/><rect class="wall" x="${floorX}" y="${floorY + a}" width="${b}" height="${height - p - floorY - a}"/><line x1="0" y1="0" x2="${width}" y2="0"/><line x1="0" y1="${height}" x2="${width}" y2="${height}"/><line x1="0" y1="0" x2="0" y2="${cutStart}"/><line x1="0" y1="${cutEnd}" x2="0" y2="${height}"/><line x1="${width}" y1="0" x2="${width}" y2="${cutStart}"/><line x1="${width}" y1="${cutEnd}" x2="${width}" y2="${height}"/><line class="fold-line" x1="0" y1="${cutStart}" x2="${a / 2}" y2="${cutStart}"/><line class="fold-line" x1="${a / 2}" y1="${cutStart}" x2="${a / 2}" y2="${cutEnd}"/><line class="fold-line" x1="${a / 2}" y1="${cutEnd}" x2="0" y2="${cutEnd}"/><line class="fold-line" x1="${width}" y1="${cutStart}" x2="${width - a / 2}" y2="${cutStart}"/><line class="fold-line" x1="${width - a / 2}" y1="${cutStart}" x2="${width - a / 2}" y2="${cutEnd}"/><line class="fold-line" x1="${width - a / 2}" y1="${cutEnd}" x2="${width}" y2="${cutEnd}"/><line x1="${p}" y1="${p}" x2="${width - p}" y2="${p}"/><line x1="${p}" y1="${p}" x2="${p}" y2="${floorY}"/><line x1="${p}" y1="${floorY + a}" x2="${p}" y2="${height - p}"/><line x1="${width - p}" y1="${p}" x2="${width - p}" y2="${floorY}"/><line x1="${width - p}" y1="${floorY + a}" x2="${width - p}" y2="${height - p}"/><line x1="${p}" y1="${height - p}" x2="${width - p}" y2="${height - p}"/><line x1="${floorX}" y1="${floorY}" x2="${floorX}" y2="${floorY + a}"/><line x1="${floorX + b}" y1="${floorY}" x2="${floorX + b}" y2="${floorY + a}"/><line x1="${p}" y1="${floorY}" x2="${floorX}" y2="${floorY}"/><line x1="${floorX + b}" y1="${floorY}" x2="${width - p}" y2="${floorY}"/><line x1="${p}" y1="${floorY + a}" x2="${floorX}" y2="${floorY + a}"/><line x1="${floorX + b}" y1="${floorY + a}" x2="${width - p}" y2="${floorY + a}"/>`;
+      if (measure) drawMeasure(measure.end);
+    }
+
+    function point(event) {
+      const box = svg.getBoundingClientRect();
+      return {
+        x: (event.clientX - box.left) * canvasWidth / box.width,
+        y: (event.clientY - box.top) * canvasHeight / box.height
+      };
+    }
+
+    function drawMeasure(end) {
+      const dx = end.x - measure.start.x;
+      const dy = end.y - measure.start.y;
+      const length = Math.sqrt(dx * dx + dy * dy);
+      let angle = Math.atan2(dy, dx) * 180 / Math.PI;
+      if (angle > 90 || angle < -90) angle += 180;
+      let group = svg.querySelector('.measurement');
+      if (!group) {
+        group = document.createElementNS('http://www.w3.org/2000/svg', 'g');
+        group.setAttribute('class', 'measurement');
+        svg.appendChild(group);
+      }
+      group.innerHTML = `<line class="measure-line" x1="${measure.start.x}" y1="${measure.start.y}" x2="${end.x}" y2="${end.y}"/>`;
+      const box = svg.getBoundingClientRect();
+      const mx = ((measure.start.x + end.x) / 2) * box.width / canvasWidth;
+      const my = ((measure.start.y + end.y) / 2) * box.height / canvasHeight;
+      measureLabel.textContent = `${Math.round(length)} мм`;
+      measureLabel.hidden = false;
+      measureLabel.style.left = `${mx}px`;
+      measureLabel.style.top = `${my - 8}px`;
+      measureLabel.style.transform = `translate(-50%, -50%) rotate(${angle}deg)`;
+    }
+
+    function clearMeasure() {
+      svg.querySelector('.measurement')?.remove();
+      measureLabel.hidden = true;
+      measure = null;
+    }
+
+    svg.addEventListener('pointerdown', event => {
+      if (measure) {
+        clearMeasure();
+        return;
+      }
+      measure = { start: point(event), end: point(event) };
+      svg.setPointerCapture(event.pointerId);
+      drawMeasure(measure.end);
+    });
+
+    svg.addEventListener('pointermove', event => {
+      if (!measure) return;
+      measure.end = point(event);
+      drawMeasure(measure.end);
+    });
+
+    svg.addEventListener('pointerup', event => {
+      if (!measure) return;
+      measure.end = point(event);
+      drawMeasure(measure.end);
+      svg.releasePointerCapture(event.pointerId);
+    });
+
+    document.addEventListener('keydown', event => {
+      if (event.key === 'Escape') clearMeasure();
+    });
+
+    fields.forEach(field => field.addEventListener('input', draw));
+    fields.forEach(field => field.addEventListener('wheel', event => {
+      event.preventDefault();
+      field.stepUp(event.deltaY < 0 ? 1 : -1);
+      field.dispatchEvent(new Event('input', { bubbles: true }));
+    }, { passive: false }));
+    draw();
+  </script>
+</body>
+</html>
