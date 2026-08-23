@@ -15,6 +15,7 @@
     main { max-width: 720px; margin: auto; }
     h1 { margin: 0 0 24px; font-size: 24px; font-weight: 600; }
     .fields { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
+    .actions { display: flex; gap: 12px; margin: 0 0 24px; }
     label { display: grid; gap: 4px; }
     input {
       width: 100px;
@@ -23,6 +24,7 @@
       border-radius: 4px;
       font: inherit;
     }
+    button { padding: 8px 12px; font: inherit; cursor: pointer; }
     .result { margin-bottom: 16px; }
     .canvas { position: relative; }
     svg { display: block; border: 1px solid #ddd; touch-action: none; }
@@ -51,6 +53,10 @@
       <label>Припуск (p) <input id="p" type="number" min="0" value="15"></label>
       <label>Масштаб <input id="scale" type="number" min="0.1" step="0.1" value="2"></label>
     </div>
+    <div class="actions">
+      <button id="reset" type="button">Сбросить</button>
+      <button id="share" type="button">Поделиться</button>
+    </div>
 
     <div class="result">Размер выкройки: <output id="size"></output> мм</div>
     <div class="canvas">
@@ -75,6 +81,10 @@
     const svg = document.getElementById('pattern');
     const size = document.getElementById('size');
     const measureLabel = document.getElementById('measureLabel');
+    const resetButton = document.getElementById('reset');
+    const shareButton = document.getElementById('share');
+    const defaults = { a: 100, b: 160, h: 50, p: 15, scale: 2 };
+    const storageKey = 'h-basket-pattern-values';
     const dimensionLabels = [
       document.getElementById('outerLabel'),
       document.getElementById('innerLabel'),
@@ -102,6 +112,21 @@
       `<line${className ? ` class="${className}"` : ''} x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
     const rect = (className, x, y, width, height) =>
       `<rect class="${className}" x="${x}" y="${y}" width="${width}" height="${height}"/>`;
+
+    function values() {
+      return Object.fromEntries(fields.map(field => [field.id, field.value]));
+    }
+
+    function setValues(data) {
+      fields.forEach(field => {
+        if (data[field.id] !== undefined) field.value = data[field.id];
+      });
+      draw();
+    }
+
+    function saveValues() {
+      localStorage.setItem(storageKey, JSON.stringify(values()));
+    }
 
     function draw() {
       const [a, b, h, p, scale] = fields.map(field => Math.max(0, Number(field.value) || 0));
@@ -293,11 +318,35 @@
     });
 
     fields.forEach(field => field.addEventListener('input', draw));
+    fields.forEach(field => field.addEventListener('input', saveValues));
     fields.forEach(field => field.addEventListener('wheel', event => {
       event.preventDefault();
       field.stepUp(event.deltaY < 0 ? 1 : -1);
       field.dispatchEvent(new Event('input', { bubbles: true }));
     }, { passive: false }));
+
+    resetButton.addEventListener('click', () => {
+      setValues(defaults);
+      saveValues();
+    });
+
+    shareButton.addEventListener('click', async () => {
+      const url = new URL(window.location.href);
+      Object.entries(values()).forEach(([key, value]) => {
+        if (key !== 'scale') url.searchParams.set(key, value);
+      });
+      try {
+        await navigator.clipboard.writeText(url.href);
+        shareButton.textContent = 'Ссылка скопирована';
+        setTimeout(() => { shareButton.textContent = 'Поделиться'; }, 1500);
+      } catch {
+        window.prompt('Скопируйте ссылку:', url.href);
+      }
+    });
+
+    const params = new URLSearchParams(window.location.search);
+    const saved = JSON.parse(localStorage.getItem(storageKey) || 'null');
+    setValues(params.toString() ? Object.fromEntries(params) : (saved || defaults));
     draw();
   </script>
 </body>
