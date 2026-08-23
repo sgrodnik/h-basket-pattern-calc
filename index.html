@@ -1,9 +1,9 @@
 <!doctype html>
-<html lang="ru">
+<html lang="en">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Калькулятор H-выкройки корзины</title>
+  <title>H-Basket Pattern Calculator</title>
   <style>
     * { box-sizing: border-box; }
     body {
@@ -15,8 +15,8 @@
     main { max-width: 720px; margin: auto; }
     h1 { margin: 0 0 24px; font-size: 24px; font-weight: 600; }
     .fields { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 24px; }
-    .actions { display: flex; gap: 12px; margin: 20px 0 0; }
-    .language { margin-bottom: 16px; }
+    .actions { display: flex; align-items: end; flex-wrap: wrap; gap: 12px; margin: 20px 0 0; }
+    .language { margin: 0; }
     label { display: grid; gap: 4px; }
     input {
       width: 100px;
@@ -47,17 +47,6 @@
   <main>
     <h1 data-i18n="title">Калькулятор H-выкройки корзины</h1>
 
-    <div class="language">
-      <label><span data-i18n="language">Язык</span>
-        <select id="language" aria-label="Язык">
-          <option value="ru">Русский</option>
-          <option value="en">English</option>
-          <option value="es">Español</option>
-          <option value="zh">中文</option>
-        </select>
-      </label>
-    </div>
-
     <div class="fields">
       <label><span data-i18n="width">Ширина (a)</span> <input id="a" type="number" min="0" value="120"></label>
       <label><span data-i18n="length">Длина (b)</span> <input id="b" type="number" min="0" value="180"></label>
@@ -86,6 +75,16 @@
     <div class="actions">
       <button id="reset" type="button" data-i18n="reset">Сбросить</button>
       <button id="share" type="button" data-i18n="share">Поделиться ссылкой с размерами</button>
+      <div class="language">
+        <label><span data-i18n="language">Язык</span>
+          <select id="language" aria-label="Язык">
+            <option value="ru">Русский</option>
+            <option value="en">English</option>
+            <option value="es">Español</option>
+            <option value="zh">中文</option>
+          </select>
+        </label>
+      </div>
     </div>
   </main>
 
@@ -104,7 +103,10 @@
       es: { title: 'Calculadora de patrón H para cesta', language: 'Idioma', width: 'Ancho (a)', length: 'Largo (b)', height: 'Alto (h)', allowance: 'Margen (p)', scale: 'Escala', patternSize: 'Tamaño del patrón:', mm: 'mm', patternCanvas: 'Lienzo del patrón', reset: 'Restablecer', share: 'Compartir enlace con medidas', copied: 'Enlace copiado', shareShort: 'Compartir', copyPrompt: 'Copia este enlace:' },
       zh: { title: 'H 型篮子纸样计算器', language: '语言', width: '宽度 (a)', length: '长度 (b)', height: '高度 (h)', allowance: '缝份 (p)', scale: '比例', patternSize: '纸样尺寸：', mm: '毫米', patternCanvas: '纸样画布', reset: '重置', share: '分享尺寸链接', copied: '链接已复制', shareShort: '分享', copyPrompt: '请复制链接：' }
     };
-    let currentLanguage = localStorage.getItem(languageStorageKey) || 'ru';
+    const browserLanguage = (navigator.languages || [navigator.language])
+      .map(language => language.toLowerCase().split('-')[0])
+      .find(language => translations[language]) || 'en';
+    let currentLanguage = localStorage.getItem(languageStorageKey) || browserLanguage;
     const defaults = { a: 100, b: 160, h: 50, p: 15, scale: 2 };
     const storageKey = 'h-basket-pattern-values';
     const dimensionLabels = [
@@ -155,7 +157,7 @@
     }
 
     function applyLanguage(language) {
-      currentLanguage = translations[language] ? language : 'ru';
+      currentLanguage = translations[language] ? language : 'en';
       languageSelect.value = currentLanguage;
       document.documentElement.lang = currentLanguage;
       document.title = t('title');
