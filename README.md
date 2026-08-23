@@ -9,6 +9,6 @@ A lightweight, zero-dependency web tool to calculate, visualize, and measure H-s
 - **Real-Time SVG Preview:** Dynamic pattern rendering with detailed dimension lines, folds, and seam allowances.
 - **Interactive Measurement Tool:** Click/tap and drag on the canvas to measure any distance on the pattern.
 - **Multi-Language (i18n):** Native support for 8 languages (EN, RU, ES, ZH, DE, FR, IT, PT) with automatic browser detection.
-- **Light and Dark Themes:** Choose Auto, Day, or Night mode; the preference is saved locally.
+- **Light and Dark Themes:** Choose Auto, Day, or Night mode.
 - **URL Param & Local Storage Sync:** Share specific basket dimensions via generated links or automatically save settings locally.
 - **Zero Dependencies:** Pure vanilla JavaScript, CSS, and HTML5. No build step required.
